@@ -7,7 +7,7 @@ from datetime import datetime
 import plotly.express as px
 
 # --- 1. VERİ YÖNETİMİ ---
-VERI_DOSYASI = "nida_akademi_data_v29.json"
+VERI_DOSYASI = "nida_akademi_data_v30.json"
 
 def veri_yukle():
     if os.path.exists(VERI_DOSYASI):
@@ -28,7 +28,7 @@ if 'db' not in st.session_state:
 st.set_page_config(page_title="Eğitim Koçu Nida GÖMCELİ", layout="wide")
 st.markdown("<style>.stApp { background-color: #05070a; color: white; }</style>", unsafe_allow_html=True)
 
-# --- 3. GİRİŞ & ŞİFRE BELİRLEME ---
+# --- 3. GİRİŞ VE ŞİFRE BELİRLEME ---
 if "logged_in" not in st.session_state:
     st.title("🎓 Eğitim Koçu Nida GÖMCELİ")
     tab_giris, tab_sifre = st.tabs(["🔐 Giriş Yap", "🆕 İlk Şifremi Oluştur"])
@@ -49,34 +49,28 @@ if "logged_in" not in st.session_state:
         st.info("Sistemde kayıtlıysanız buradan ilk şifrenizi belirleyebilirsiniz.")
         nu = st.text_input("Sistemdeki Tam Adınız", key="new_user")
         np = st.text_input("Yeni Şifreniz", type="password", key="new_pass")
-        np2 = st.text_input("Şifre Tekrar", type="password", key="new_pass_confirm")
         if st.button("Şifremi Kaydet"):
             if nu in st.session_state.db["ogrenciler"]:
-                if np == np2 and len(np) >= 4:
-                    st.session_state.db["ogrenciler"][nu]["sifre"] = np
-                    veri_kaydet(st.session_state.db)
-                    st.success("Şifreniz oluşturuldu! Giriş yap sekmesine dönebilirsiniz.")
-                else: st.warning("Şifreler eşleşmiyor veya çok kısa!")
-            else: st.error("Adınız sistemde bulunamadı. Lütfen Nida Hocanıza danışın.")
+                st.session_state.db["ogrenciler"][nu]["sifre"] = np
+                veri_kaydet(st.session_state.db)
+                st.success("Şifreniz oluşturuldu! Giriş yap sekmesine dönebilirsiniz.")
+            else: st.error("Adınız sistemde bulunamadı.")
 
 else:
     # --- 4. ADMIN PANELİ ---
     if st.session_state["role"] == "admin":
         st.sidebar.title("Nida Hocam")
-        menu = st.sidebar.radio("Menü", ["Öğrenci Kaydı", "Rapor & WhatsApp", "Genel Analiz"])
+        menu = st.sidebar.radio("Menü", ["Öğrenci Kaydı", "Rapor & WhatsApp", "Analiz"])
         if st.sidebar.button("Çıkış Yap"): del st.session_state["logged_in"]; st.rerun()
 
         if menu == "Öğrenci Kaydı":
             with st.expander("👤 Yeni Öğrenci Tanımla"):
                 ad = st.text_input("Öğrenci Ad Soyad")
-                g = st.selectbox("Sınav Grubu", ["LGS", "YKS"])
-                t = st.text_input("Veli Tel (Örn: 905xxxxxxxxx)")
+                t = st.text_input("Veli Telefon (905...)")
                 h = st.number_input("Haftalık Soru Hedefi", 100)
                 if st.button("Sisteme Ekle"):
-                    if ad:
-                        st.session_state.db["ogrenciler"][ad] = {"soru": [], "sinav": g, "hedef": h, "tel": t, "sifre": None}
-                        veri_kaydet(st.session_state.db)
-                        st.success(f"{ad} başarıyla eklendi. Öğrenci artık şifre belirleyebilir.")
+                    st.session_state.db["ogrenciler"][ad] = {"soru": [], "hedef": h, "tel": t, "sifre": None}
+                    veri_kaydet(st.session_state.db); st.success(f"{ad} eklendi.")
         
         elif menu == "Rapor & WhatsApp":
             sec = st.selectbox("Öğrenci Seç", list(st.session_state.db["ogrenciler"].keys()))
@@ -84,42 +78,45 @@ else:
             df = pd.DataFrame(o["soru"])
             bugun = datetime.now().strftime("%d/%m")
             bugun_df = df[df["Tarih"] == bugun] if not df.empty else pd.DataFrame()
-            
             g_toplam = bugun_df["Toplam"].sum() if not bugun_df.empty else 0
-            video = len(bugun_df[bugun_df["Tür"] == "Video İzleme"])
-            ders_ozeti = ""
-            if not bugun_df.empty:
-                ozet = bugun_df.groupby("Ders")["Toplam"].sum()
-                for d, s in ozet.items():
-                    if s > 0: ders_ozeti += f"\n- {d}: {s} Soru"
-
-            msg = f"Sayın Velimiz, {sec} bugünkü çalışmasını tamamladı:\n✅ Toplam Soru: {g_toplam}\n📺 Video: {video}\n{ders_ozeti}\n\nEğitim Koçu Nida GÖMCELİ"
+            
+            msg = f"Sayın Velimiz, {sec} bugünkü çalışmasında {g_toplam} soruya ulaştı. İyi çalışmalar dileriz."
             url = f"https://wa.me/{o.get('tel','')}?text={urllib.parse.quote(msg)}"
-            st.markdown(f'<a href="{url}" target="_blank" style="background-color:#25D366; color:white; padding:12px; text-decoration:none; border-radius:5px; font-weight:bold;">📱 Veliye WhatsApp Gönder</a>', unsafe_allow_html=True)
-            st.dataframe(bugun_df, use_container_width=True)
+            st.markdown(f'<a href="{url}" target="_blank" style="background-color:#25D366; color:white; padding:10px; text-decoration:none; border-radius:5px;">📱 Veliye Gönder</a>', unsafe_allow_html=True)
 
     # --- 5. ÖĞRENCİ PANELİ ---
     else:
         u = st.session_state["user"]; o = st.session_state.db["ogrenciler"][u]
         st.title(f"Hoş Geldin, {u}")
-        tab1, tab2 = st.tabs(["📝 Çalışma Girişi", "📊 Gelişim Grafiğim"])
+        tab1, tab2 = st.tabs(["📝 Veri Girişi", "📈 Gelişimim & Rapor Gönder"])
         
         with tab1:
-            tur = st.selectbox("Çalışma Türü", ["Soru Çözümü", "Video İzleme", "Konu Tekrarı", "Özel Ders"])
-            ders = st.selectbox("Ders", ["Matematik", "Fen Bilimleri", "Türkçe", "Sosyal Bilgiler", "İngilizce", "Din Kültürü"])
+            tur = st.selectbox("Tür", ["Soru Çözümü", "Video İzleme", "Konu Tekrarı", "Özel Ders"])
+            ders = st.selectbox("Ders", ["Matematik", "Fen", "Türkçe", "Sosyal", "İngilizce", "Din"])
             if tur == "Soru Çözümü":
                 d = st.number_input("Doğru", 0); y = st.number_input("Yanlış", 0)
-                if st.button("Veriyi Kaydet"):
+                if st.button("Kaydet"):
                     o["soru"].append({"Tarih": datetime.now().strftime("%d/%m"), "Ders": ders, "Tür": tur, "Toplam": d+y, "Detay": f"{d}D {y}Y"})
                     veri_kaydet(st.session_state.db); st.success("Kaydedildi!")
             else:
-                top = st.number_input("Kaç Saat/Adet?", 1) if tur == "Özel Ders" else 0
                 if st.button("Kaydet"):
-                    o["soru"].append({"Tarih": datetime.now().strftime("%d/%m"), "Ders": ders, "Tür": tur, "Toplam": top, "Detay": tur})
+                    o["soru"].append({"Tarih": datetime.now().strftime("%d/%m"), "Ders": ders, "Tür": tur, "Toplam": 0, "Detay": tur})
                     veri_kaydet(st.session_state.db); st.success("Kaydedildi!")
 
         with tab2:
             df_g = pd.DataFrame(o["soru"])
+            bugun = datetime.now().strftime("%d/%m")
+            gunluk_toplam = df_g[df_g["Tarih"] == bugun]["Toplam"].sum() if not df_g.empty else 0
+            
+            st.metric("Bugünkü Toplam Sorun", f"{gunluk_toplam} Soru")
+            
+            # --- ÖĞRENCİ İÇİN WHATSAPP BUTONU ---
+            st.write("### 🚀 Günlük Raporunu Hocana Gönder")
+            rapor_mesaji = f"Hocam Merhaba, Ben {u}. Bugün toplam {gunluk_toplam} soru çözdüm. Çalışmamı tamamladım! ✨"
+            hoca_tel = "90505XXXXXXX" # BURAYA KENDİ NUMARANI YAZABİLİRSİN HOCAM
+            wa_url = f"https://wa.me/{hoca_tel}?text={urllib.parse.quote(rapor_mesaji)}"
+            
+            st.markdown(f'<a href="{wa_url}" target="_blank" style="background-color:#007bff; color:white; padding:12px; text-decoration:none; border-radius:8px; font-weight:bold;">📤 Hocama Rapor Gönder</a>', unsafe_allow_html=True)
+            
             if not df_g.empty:
                 st.plotly_chart(px.pie(df_g, values='Toplam', names='Ders', title="Ders Dağılımın"))
-            else: st.info("Henüz grafik için veri yok.")
