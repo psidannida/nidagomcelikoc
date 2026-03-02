@@ -164,4 +164,4 @@ else:
                 st.plotly_chart(px.pie(df_o, values='Toplam', names='Ders', title="Ders Dağılımı"))
             rapor_msg = f"Nida Hocam Merhaba, Ben {u}. Bugün {bugun_s} soru çözdüm. Raporum hazır!"
             hoca_url = f"https://wa.me/{HOCA_TEL}?text={urllib.parse.quote(rapor_msg)}"
-            st.markdown(f'<a href="{hoca_url}" target="_blank" style="background-color:#007bff; color:white; padding:15px; text-decoration:none; border-radius:10px; font-weight:bold; display:block; text-align:center;">📤 HOCAMA RAPOR GÖNDER</a>', unsafe_allow_html=True
+            st.markdown(f'<a href="{hoca_url}" target="_blank" style="background-color:#007bff; color:white; padding:15px; text-decoration:none; border-radius:10px; font-weight:bold; display:block; text-align:center;">📤 HOCAMA RAPOR GÖNDER</a>', unsafe_allow_html=True)
