@@ -1,4 +1,4 @@
-[01:26, 03.03.2026] Nida (NURTANIŞ) GÖMCELİ: import streamlit as st
+import streamlit as st
 import pandas as pd
 import json
 import os
@@ -168,4 +168,5 @@ else:
             df = pd.DataFrame(o["soru"])
             if not df.empty:
                 fig = px.pie(df, values='Toplam', names='Ders', title="Ders Dağılımın")
+
                 st.plotly_chart(fig
